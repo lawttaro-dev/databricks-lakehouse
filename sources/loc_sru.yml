@@ -1,0 +1,26 @@
+# Library of Congress catalog through SRU. Analysis: docs/02-data-source-loc-catalog.md
+source: loc_sru
+protocol: sru
+endpoint: http://lx2.loc.gov:210/lcdb
+record_schema: marcxml
+
+# Landing Volume inside each environment catalog: /Volumes/<catalog>/landing/loc_sru
+volume: landing.loc_sru
+
+# Undocumented rate limit: 3 s between requests worked for ~300 requests
+throttle_seconds: 3
+# Larger pages fail intermittently; 100 is the reliable maximum
+page_size: 100
+
+backfill:
+  from_year: 1900  # to_year defaults to the current year
+
+window:
+  years: 5  # re-harvest the last N publication years (cataloging lag)
+
+# Country code -> subject terms OR-ed in the query (name and adjective are different headings)
+countries:
+  AR: [Argentina, Argentine]
+  MX: [Mexico, Mexican]
+  BR: [Brazil, Brazilian]
+  CL: [Chile, Chilean]

@@ -8,7 +8,11 @@ authors = [
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "databricks-sdk>=0.161.0",
+    "pyyaml>=6.0.3",
 ]
+
+[project.scripts]
+lakehouse-extract = "lakehouse.extract.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
