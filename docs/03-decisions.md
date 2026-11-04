@@ -53,3 +53,9 @@ Short log of decisions taken, newest last. Each entry: context, decision, conseq
 
 - **Decision:** one reusable client per protocol (SRU first), and one YAML config per source (endpoint, query template, countries and terms, window default, throttle). Parsers per format (MARCXML) live in the bronze job (see ADR-006).
 - **Consequences:** a new library that speaks SRU is a new YAML, not new code.
+
+## ADR-010 — Unity Catalog objects managed outside the bundle
+
+- **Context:** Asset Bundles can manage schemas and volumes, but a resource removed from the bundle is deleted on the next deploy, and deleting a schema drops its tables. In `mode: development` the bundle also prefixes schema names per user (`dev_<user>_bronze`).
+- **Decision:** catalogs, schemas and volumes are created by an idempotent SQL template (`infra/unity_catalog.sql`) applied with `infra/apply_unity_catalog.py`. The bundle only manages jobs and code.
+- **Consequences:** long-lived data containers cannot be dropped by a bundle change. Layout per catalog: schemas `landing` (Volumes with raw files), `bronze`, `silver`, `gold`. One Volume per source (`landing.loc_sru`).
