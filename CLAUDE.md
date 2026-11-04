@@ -4,6 +4,8 @@ Databricks lakehouse for a world bibliographic catalog: what was written about e
 
 The project is also how the owner learns Spark and Databricks. When touching Databricks, explain what we're doing and what alternatives exist, comparing to pandas / Airflow / Dagster.
 
+Architecture overview and diagrams: [docs/04-architecture.md](docs/04-architecture.md). Keep its status table and diagrams in sync when components land.
+
 ## Platform
 
 - Databricks **Free Edition**: one workspace, serverless only, non-commercial. Limits shape the design ([docs/03-decisions.md](docs/03-decisions.md)).
