@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>168</zs:numberOfRecords><zs:records><zs:record><zs:recordSchema>dc</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><srw_dc:dc xmlns:srw_dc="info:srw/schema/1/dc-schema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="info:srw/schema/1/dc-schema http://www.loc.gov/standards/sru/resources/dc-schema.xsd">
+  <title xmlns="http://purl.org/dc/elements/1.1/">The voice of Peron.</title>
+  <creator xmlns="http://purl.org/dc/elements/1.1/">Pero&#x301;n, Juan Domingo, 1895-1974.</creator>
+  <type xmlns="http://purl.org/dc/elements/1.1/">text</type>
+  <publisher xmlns="http://purl.org/dc/elements/1.1/">[Buenos Aires]</publisher>
+  <date xmlns="http://purl.org/dc/elements/1.1/">1950.</date>
+  <language xmlns="http://purl.org/dc/elements/1.1/">eng</language>
+  <coverage xmlns="http://purl.org/dc/elements/1.1/">Argentina.</coverage>
+</srw_dc:dc></zs:recordData><zs:recordPosition>1</zs:recordPosition></zs:record><zs:record><zs:recordSchema>dc</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><srw_dc:dc xmlns:srw_dc="info:srw/schema/1/dc-schema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="info:srw/schema/1/dc-schema http://www.loc.gov/standards/sru/resources/dc-schema.xsd">
+  <title xmlns="http://purl.org/dc/elements/1.1/">The public school system of Argentina,</title>
+  <creator xmlns="http://purl.org/dc/elements/1.1/">Faust, Augustus F.</creator>
+  <type xmlns="http://purl.org/dc/elements/1.1/">text</type>
+  <publisher xmlns="http://purl.org/dc/elements/1.1/"/>
+  <date xmlns="http://purl.org/dc/elements/1.1/">1950.</date>
+  <language xmlns="http://purl.org/dc/elements/1.1/">eng</language>
+  <description xmlns="http://purl.org/dc/elements/1.1/">Typescript (carbon copy)</description>
+  <description xmlns="http://purl.org/dc/elements/1.1/">Thesis--University of Utah.</description>
+  <description xmlns="http://purl.org/dc/elements/1.1/">Bibliography: leaves 264-273.</description>
+  <subject xmlns="http://purl.org/dc/elements/1.1/">Education--Argentina.</subject>
+  <subject xmlns="http://purl.org/dc/elements/1.1/">School management and organization--Argentina.</subject>
+</srw_dc:dc></zs:recordData><zs:recordPosition>2</zs:recordPosition></zs:record><zs:record><zs:recordSchema>dc</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><srw_dc:dc xmlns:srw_dc="info:srw/schema/1/dc-schema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="info:srw/schema/1/dc-schema http://www.loc.gov/standards/sru/resources/dc-schema.xsd">
+  <title xmlns="http://purl.org/dc/elements/1.1/">The Development of Political Science in the Argentine Republic.</title>
+  <creator xmlns="http://purl.org/dc/elements/1.1/">Linares Quintana, Segundo V., 1909-</creator>
+  <type xmlns="http://purl.org/dc/elements/1.1/">text</type>
+  <publisher xmlns="http://purl.org/dc/elements/1.1/">[n.p.] Reprinted from "Contemporary Political Science",</publisher>
+  <date xmlns="http://purl.org/dc/elements/1.1/">1950.</date>
+  <language xmlns="http://purl.org/dc/elements/1.1/">eng</language>
+  <subject xmlns="http://purl.org/dc/elements/1.1/">Constitutional history--Argentina.</subject>
+  <subject xmlns="http://purl.org/dc/elements/1.1/">Political science--Argentina--History.</subject>
+</srw_dc:dc></zs:recordData><zs:recordPosition>3</zs:recordPosition></zs:record></zs:records><zs:nextRecordPosition>4</zs:nextRecordPosition><zs:echoedSearchRetrieveRequest><zs:version>1.1</zs:version><zs:query>dc.subject="Argentina" and dc.date=1950</zs:query><zs:startRecord>1</zs:startRecord><zs:maximumRecords>3</zs:maximumRecords><zs:recordPacking>xml</zs:recordPacking><zs:recordSchema>dc</zs:recordSchema></zs:echoedSearchRetrieveRequest></zs:searchRetrieveResponse>

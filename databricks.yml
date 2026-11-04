@@ -1,0 +1,35 @@
+# Databricks Asset Bundle: one bundle, one target per environment.
+# Environments are Unity Catalog catalogs in a single workspace (see docs/03-decisions.md, ADR-001).
+bundle:
+  name: lakehouse
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds this environment's schemas and tables.
+
+workspace:
+  host: https://dbc-fc51ba90-7949.cloud.databricks.com
+
+targets:
+  dev:
+    # Resources are prefixed with "[dev <user>]" and schedules are paused
+    mode: development
+    default: true
+    variables:
+      catalog: dev
+
+  # qa/prod keep the default root path (~/.bundle/...) of the deploying identity.
+  # Once CI deploys as the service principal, that is the principal's home folder,
+  # not /Workspace/Shared (which every workspace user can write to).
+  qa:
+    mode: production
+    variables:
+      catalog: qa
+
+  prod:
+    mode: production
+    variables:
+      catalog: prod
