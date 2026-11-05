@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>1</zs:numberOfRecords><zs:records><zs:record><zs:recordSchema>marcxml</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><record xmlns="http://www.loc.gov/MARC21/slim">
+  <leader>00300cam a2200100   4500</leader>
+  <controlfield tag="001">fixture-no-005</controlfield>
+  <controlfield tag="008">000101s1900    mx            000 0 spa  </controlfield>
+  <datafield tag="245" ind1="0" ind2="0">
+    <subfield code="a">Handmade record without a 005 field.</subfield>
+  </datafield>
+</record></zs:recordData><zs:recordPosition>1</zs:recordPosition></zs:record></zs:records></zs:searchRetrieveResponse>

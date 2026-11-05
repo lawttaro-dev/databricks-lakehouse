@@ -6,6 +6,13 @@ bundle:
 include:
   - resources/*.yml
 
+# The project wheel (src/lakehouse), built locally or in CI and uploaded on deploy
+artifacts:
+  default:
+    type: whl
+    build: uv build --wheel
+    path: .
+
 variables:
   catalog:
     description: Unity Catalog catalog that holds this environment's schemas and tables.

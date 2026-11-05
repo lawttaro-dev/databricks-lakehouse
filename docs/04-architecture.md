@@ -37,7 +37,7 @@ flowchart LR
         SI[("silver<br/>flattened, deduplicated")]
         GO[("gold<br/>works by year × country × topic")]
         SYS[("system tables<br/>audit, lineage, billing")]
-        VOL -- "Auto Loader + pymarc" --> BR
+        VOL -- "Auto Loader<br/>(XML source)" --> BR
         BR -- "MERGE on record id" --> SI
         SI -- "aggregations" --> GO
     end
@@ -113,6 +113,7 @@ flowchart LR
     M["metastore"] --> C["catalog<br/>dev / qa / prod"]
     C --> L["landing"] --> V[("Volume loc_sru<br/>raw files")]
     C --> B["bronze"] --> BT[("loc_records")]
+    B --> CK[("Volume checkpoints<br/>Auto Loader state")]
     C --> S["silver"] --> ST[("loc_records")]
     C --> G["gold"] --> GT[("works_by_year_country_topic")]
 
@@ -123,7 +124,7 @@ flowchart LR
 | Schema | Holds | Rule |
 |---|---|---|
 | `landing` | Volumes with files exactly as the source returned them | Never transformed, never deleted by pipelines |
-| `bronze` | One Delta row per source record, the full record kept, plus ingestion metadata | Append/merge only, nothing dropped |
+| `bronze` | One Delta row per source record, the full record kept, plus ingestion metadata. Volume `checkpoints` for streaming state | Append/merge only, nothing dropped |
 | `silver` | Canonical flattened records per source, deduplicated on the source record id | Business rules and typing happen here |
 | `gold` | Aggregates for analysis | Rebuilt from silver |
 
@@ -205,12 +206,12 @@ Failure semantics:
 
 The protocol client is source-agnostic: another library that speaks SRU needs only a new YAML file (ADR-009).
 
-## 6. Processing (planned)
+## 6. Processing
 
 ```mermaid
 flowchart LR
-    V[("landing Volume<br/>page-*.xml")] -->|"Auto Loader<br/>(incremental file discovery,<br/>checkpointed)"| P["split pages into records<br/>pymarc → MARC-in-JSON"]
-    P --> B[("bronze.loc_records<br/>record_id, record_modified,<br/>marc_json, batch, country, year,<br/>source_file, ingested_at")]
+    V[("landing Volume<br/>page-*.xml")] -->|"Auto Loader, XML source<br/>rowTag=record, explicit schema<br/>(availableNow, checkpointed)"| P["to_bronze<br/>ids from 001/005,<br/>partitions from the path"]
+    P --> B[("bronze.loc_records<br/>record_id, record_modified,<br/>leader, controlfield[], datafield[],<br/>batch, country, year,<br/>source_file, ingested_at")]
     B -->|"foreachBatch MERGE<br/>on record_id,<br/>update if 005 changed"| S[("silver.loc_records<br/>flattened fields,<br/>subjects as array#lt;struct#gt;")]
     S -->|"group by year, country, topic"| G[("gold.works_by_year_country_topic")]
 
@@ -218,6 +219,7 @@ flowchart LR
     class P,B,S,G planned
 ```
 
+- Bronze code: `src/lakehouse/bronze/` (`marcxml.py` schema and reader, `transform.py` pure transformation, `job.py` Auto Loader entry point), job `resources/loc_bronze_job.yml` (serverless, project wheel). Parsing choice: ADR-011.
 - Written in PySpark as pure `DataFrame -> DataFrame` functions, unit-tested locally. Only the job entry points read and write tables, with the catalog passed as a parameter.
 - Orchestrated as one Lakeflow Job per source (`bronze → silver → gold` tasks), defined in `resources/*.yml`.
 - The same record can match several countries (a work about Argentina and Chile), and the same page can be landed twice. Both are resolved by deduplicating on `record_id` before the MERGE.
@@ -231,7 +233,7 @@ flowchart LR
 | Asset Bundle with `dev` / `qa` / `prod` targets | Done (no jobs yet) |
 | Unity Catalog layout in all three catalogs | Done |
 | SRU extractor (backfill + window, resumable) | Done, first data landed in `dev` |
-| Bronze: Auto Loader + pymarc | Next |
+| Bronze: Auto Loader + XML source | In progress: reader, job and tests ready; `to_bronze` pending |
 | Silver, gold | Planned |
 | CI/CD (GitHub Actions, service principal) | Planned |
 | Scheduled extraction in GitHub Actions | Planned |

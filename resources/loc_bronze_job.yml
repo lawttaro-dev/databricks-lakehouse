@@ -1,0 +1,20 @@
+# Bronze ingestion for the Library of Congress source (src/lakehouse/bronze/job.py).
+# Serverless: no cluster definition, only a Python environment with our wheel.
+resources:
+  jobs:
+    loc_bronze:
+      name: loc-bronze
+      max_concurrent_runs: 1  # one writer per checkpoint
+      tasks:
+        - task_key: bronze
+          environment_key: default
+          python_wheel_task:
+            package_name: lakehouse
+            entry_point: lakehouse-bronze
+            parameters: ["--catalog", "${var.catalog}"]
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "6"  # Python 3.12, see CLAUDE.md
+            dependencies:
+              - ../dist/*.whl
