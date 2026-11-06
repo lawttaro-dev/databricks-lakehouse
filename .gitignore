@@ -26,3 +26,6 @@ derby.log
 .vscode/
 .idea/
 .DS_Store
+
+# Local notebook state (notebooks/*.py)
+.local/
