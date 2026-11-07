@@ -40,6 +40,7 @@ databricks bundle deploy -t dev  # ask before running: writes to the workspace
 ## Conventions
 
 - Code, comments, identifiers, commits and docs in English.
+- `main` is protected: work on a branch (`feat/...`, `fix/...`), open a PR with `gh pr create`, merge when CI is green. Merging deploys to qa; a `v*` tag deploys to prod ([docs/05-operations.md](docs/05-operations.md)).
 - Commits: Conventional Commits (`feat(scope): ...`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`).
 - Transformations are pure `DataFrame -> DataFrame` functions, unit-tested locally. Table and Volume I/O stays at the edges, and the catalog is always a parameter, never hard-coded.
 - Python dependencies only through `uv add` (`--dev` for local-only ones like pyspark, which the Databricks runtime already provides). Never `pip install` into the system Python.
