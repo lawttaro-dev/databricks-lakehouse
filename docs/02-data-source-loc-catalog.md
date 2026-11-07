@@ -70,6 +70,7 @@ Consequences:
 | Intermittent `RemoteDisconnected` / network errors (3 in ~110 requests) | Retry with exponential backoff (10 s, 20 s, 40 s) |
 | Diagnostics come as HTTP 200 with `<diag:message>` in the body | Always parse and raise on diagnostics |
 | Pages can hold fewer records than requested (2026-11-04: 40 records with page size 100 came back as 17 + 15 + 3 + 5) | Advance `startRecord` by the records actually received, never by the requested size |
+| A page can repeat records, so others in the result set are never returned (2026-11-04, BR 2026: 371 records reported and received, but 3 repeated inside `page-000201`, so 368 distinct) | Bronze keeps the duplicates, silver deduplicates on `001`. Open: detect partitions with fewer distinct ids than `total_records` and re-harvest them |
 
 The production implementation is [`src/lakehouse/extract/`](../src/lakehouse/extract/) (`sru.py` client, `harvest.py` partitions and markers). [`explore/sru_explore.py`](../explore/sru_explore.py) is the original exploration script.
 

@@ -54,7 +54,7 @@ flowchart LR
     GO --> DOCS
 
     classDef planned stroke-dasharray: 5 5
-    class BR,SI,GO,SQL,DOCS planned
+    class SI,GO,SQL,DOCS planned
 ```
 
 ## 3. Environments and deployment
@@ -118,7 +118,7 @@ flowchart LR
     C --> G["gold"] --> GT[("works_by_year_country_topic")]
 
     classDef planned stroke-dasharray: 5 5
-    class BT,ST,GT planned
+    class ST,GT planned
 ```
 
 | Schema | Holds | Rule |
@@ -216,7 +216,7 @@ flowchart LR
     S -->|"group by year, country, topic"| G[("gold.works_by_year_country_topic")]
 
     classDef planned stroke-dasharray: 5 5
-    class P,B,S,G planned
+    class S,G planned
 ```
 
 - Bronze code: `src/lakehouse/bronze/` (`marcxml.py` schema and reader, `transform.py` pure transformation, `job.py` Auto Loader entry point), job `resources/loc_bronze_job.yml` (serverless, project wheel). Parsing choice: ADR-011.
@@ -233,7 +233,7 @@ flowchart LR
 | Asset Bundle with `dev` / `qa` / `prod` targets | Done (no jobs yet) |
 | Unity Catalog layout in all three catalogs | Done |
 | SRU extractor (backfill + window, resumable) | Done, first data landed in `dev` |
-| Bronze: Auto Loader + XML source | Code and tests done; not deployed yet |
+| Bronze: Auto Loader + XML source | Done, deployed and run in `dev` (701 rows, 2026 window) |
 | Silver, gold | Planned |
 | CI/CD (GitHub Actions, service principal) | Planned |
 | Scheduled extraction in GitHub Actions | Planned |
