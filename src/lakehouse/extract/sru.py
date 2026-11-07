@@ -123,8 +123,12 @@ class SruClient:
             records_in_page=len(root.findall(".//marc:record", NS)),
         )
 
-    def fetch_page(self, query: str, start: int, size: int, attempts: int = 4) -> SruPage:
-        """Fetch one page of records, shrinking the page on the server's intermittent error."""
+    def fetch_page(self, query: str, start: int, size: int, attempts: int = 6) -> SruPage:
+        """Fetch one page of records, retrying the server's intermittent error.
+
+        Each retry waits longer (10 s, 20 s, ...) and asks for a smaller page. The error can
+        repeat several times in a row (2026-11-07: four in a row, then fine).
+        """
         for attempt in range(attempts):
             try:
                 return self.search(query, start=start, size=size)
@@ -133,6 +137,7 @@ class SruClient:
             except SruError as e:
                 if FLAKY_DIAGNOSTIC not in str(e) or attempt == attempts - 1:
                     raise
+                self._sleep(self._backoff_seconds * (attempt + 1))
                 size = max(size * 2 // 3, 1)
         raise AssertionError("unreachable")
 

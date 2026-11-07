@@ -85,15 +85,19 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         report = harvest(client, storage, partitions, batch, config.page_size)
-    except SruError as e:
+    except SruError as e:  # not partition-specific (e.g. the endpoint is down)
         print(f"ERROR after {client.requests_made} requests: {e}", file=sys.stderr)
         return 2
 
     print(
         f"done: {len(report.completed)} completed, {len(report.skipped)} skipped, "
-        f"{len(report.pending)} pending, {report.records} records, "
+        f"{len(report.pending)} pending, {len(report.failed)} failed, {report.records} records, "
         f"{client.requests_made} requests"
     )
+    if report.failed:
+        failed = ", ".join(f"{p.country} {p.year}" for p in report.failed)
+        print(f"failed partitions (rerun to retry): {failed}", file=sys.stderr)
+        return 1
     return 0
 
 

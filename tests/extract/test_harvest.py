@@ -88,6 +88,18 @@ def test_budget_exhaustion_leaves_partition_pending_and_resumable(tmp_path):
     assert second.records == 255
 
 
+def test_failed_partition_is_reported_and_the_run_goes_on(tmp_path):
+    server = FakeSruServer({build_query(AR, 1950): 10, build_query(CL, 1950): 5})
+    server.failures.append("Unsupported index")  # the first request (AR count) fails
+    partitions = [Partition("AR", AR, 1950), Partition("CL", CL, 1950)]
+
+    report = harvest(make_client(server), LocalStorage(tmp_path), partitions, "b1", page_size=100)
+
+    assert report.failed == [Partition("AR", AR, 1950)]
+    assert report.completed == [Partition("CL", CL, 1950)]
+    assert not (tmp_path / "batch=b1/country=AR/year=1950/_SUCCESS").exists()
+
+
 def test_source_config_loads_repo_yaml():
     config = SruSourceConfig.load(Path("sources/loc_sru.yml"))
 

@@ -94,3 +94,23 @@ def test_fetch_page_shrinks_page_on_flaky_diagnostic():
 
     assert [c["maximumRecords"] for c in server.calls] == ["100", "66"]
     assert page.records_in_page == 66
+
+
+def test_fetch_page_waits_longer_before_each_flaky_retry():
+    server = FakeSruServer({QUERY: 250})
+    server.failures += [FLAKY_DIAGNOSTIC, FLAKY_DIAGNOSTIC]
+    sleeps = []
+
+    make_client(server, sleeps=sleeps).fetch_page(QUERY, start=1, size=100)
+
+    backoffs = [s for s in sleeps if s != 3]  # 3 s is the throttle
+    assert backoffs == [10, 20]
+
+
+def test_fetch_page_gives_up_after_all_attempts():
+    server = FakeSruServer({QUERY: 250})
+    server.failures += [FLAKY_DIAGNOSTIC] * 6
+
+    with pytest.raises(SruError, match="out of range"):
+        make_client(server).fetch_page(QUERY, start=1, size=100)
+    assert len(server.calls) == 6

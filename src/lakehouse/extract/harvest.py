@@ -7,7 +7,8 @@ Landing layout, read later by Auto Loader:
 
 A partition is complete only when its _SUCCESS marker exists. Runs skip complete partitions,
 so a long backfill can stop at any point (request budget, CI timeout, Ctrl+C) and resume by
-running again with the same batch.
+running again with the same batch. A partition that fails is reported and skipped; the run goes
+on with the others.
 """
 
 import json
@@ -15,7 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from lakehouse.extract.sru import BudgetExhaustedError, SruClient, build_query
+from lakehouse.extract.sru import BudgetExhaustedError, SruClient, SruError, build_query
 from lakehouse.extract.storage import LandingStorage
 
 
@@ -34,6 +35,7 @@ class HarvestReport:
     completed: list[Partition] = field(default_factory=list)
     skipped: list[Partition] = field(default_factory=list)
     pending: list[Partition] = field(default_factory=list)
+    failed: list[Partition] = field(default_factory=list)
     records: int = 0
 
 
@@ -65,6 +67,11 @@ def harvest(
             report.pending = partitions[index:]
             log(f"request budget spent; {len(report.pending)} partitions pending")
             break
+        except SruError as e:
+            # No _SUCCESS is written, so the next run retries this partition
+            report.failed.append(partition)
+            log(f"{partition.country} {partition.year}: FAILED, will retry next run ({e})")
+            continue
         report.completed.append(partition)
         report.records += records
         log(f"{partition.country} {partition.year}: {records} records")
