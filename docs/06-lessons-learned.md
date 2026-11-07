@@ -2,6 +2,13 @@
 
 What surprised us while building, newest first. Each entry: what happened, why, and what we changed. Decisions themselves live in [03-decisions.md](03-decisions.md).
 
+## 2026-11-07 — CI/CD setup
+
+- **Not every action publishes a moving major tag.** `astral-sh/setup-uv@v10` does not exist (only exact tags like `v10.3.3`), so the first CI run failed in 5 s. Check tags with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` before pinning.
+- **Squash merges rewrite history:** a commit that was only local on `main` and also travelled in the PR made local `main` diverge after the merge. Never commit on `main` now that it is protected; if it happens, check the change is in `origin/main` and `git reset --hard origin/main`.
+- **Free GitHub accounts:** branch protection and deployment approvals only for public repositories (ADR-013).
+- **In qa the job has no `[dev <user>]` prefix** (`mode: production`), and it is created by and runs as the deploying service principal.
+
 ## 2026-11-07 — SRU flaky diagnostic can repeat
 
 - **What:** the backfill stopped after 11 requests: `First record position out of range` came back on four consecutive retries for AR 2026. Minutes later the same partition worked in one page.
