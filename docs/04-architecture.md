@@ -86,7 +86,6 @@ flowchart TB
     JOBS --> CDEV & CQA & CPROD
 
     classDef planned stroke-dasharray: 5 5
-    class CI,JOBS planned
 ```
 
 | Target | Bundle mode | Deployed by | Catalog | Schedules |
@@ -100,7 +99,7 @@ flowchart TB
 | Identity | Authentication | Used for |
 |---|---|---|
 | Developer user | OAuth U2M (`databricks auth login`, token in the OS keyring) | Local CLI, `dev` deploys, exploration |
-| CI service principal | OAuth M2M (client id + secret in GitHub secrets) | `qa` / `prod` deploys and scheduled extraction |
+| `sp-lakehouse-qa`, `sp-lakehouse-prod` | OAuth M2M (client id + secret in the GitHub environments `qa` / `prod`) | Deploying and running jobs in their own catalog only (`infra/grants.sql`) |
 
 Verified on Free Edition: service principals and M2M secrets work; a principal needs the `workspace-access` entitlement (ADR-003).
 
@@ -234,13 +233,13 @@ flowchart LR
 |---|---|
 | Local toolchain (uv, Java 17, Databricks CLI, gh) | Done ([01-local-setup.md](01-local-setup.md)) |
 | Repo, uv project, local Spark + Delta tests | Done |
-| Asset Bundle with `dev` / `qa` / `prod` targets | Done, job `loc-sru` |
+| Asset Bundle with `dev` / `qa` / `prod` targets | Done, job `loc-sru` deployed to dev (by hand) and qa (by CI) |
 | Unity Catalog layout in all three catalogs | Done |
 | SRU extractor (backfill + window, resumable) | Done, first data landed in `dev` |
 | Bronze: Auto Loader + XML source | Done, deployed and run in `dev` (701 rows, 2026 window) |
 | Silver: flatten + MERGE | Code and tests done; not deployed yet |
 | Gold | Planned |
-| CI/CD (GitHub Actions, service principal) | Planned |
+| CI/CD (GitHub Actions, service principal) | Done: PR checks, qa deploy on merge, prod deploy on tag with approval (ADR-013) |
 | Scheduled extraction in GitHub Actions | Planned |
 | Generated documentation, Obsidian vault | Planned |
 | Claude tooling (skills, hooks, PR review) | Planned |
