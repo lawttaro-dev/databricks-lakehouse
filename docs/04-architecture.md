@@ -1,7 +1,7 @@
 # Architecture
 
 How the lakehouse is built: components, data flow, environments and identities.
-Decisions behind each piece are in [03-decisions.md](03-decisions.md). The source is described in [02-data-source-loc-catalog.md](02-data-source-loc-catalog.md).
+Decisions behind each piece are in [03-decisions.md](03-decisions.md). Day-to-day commands: [05-operations.md](05-operations.md). Surprises along the way: [06-lessons-learned.md](06-lessons-learned.md). The source is described in [02-data-source-loc-catalog.md](02-data-source-loc-catalog.md).
 
 Diagrams use [Mermaid](https://mermaid.js.org/), which GitHub and Obsidian render natively. Dashed boxes are **planned**, solid boxes are **implemented**.
 

@@ -4,7 +4,20 @@ Databricks lakehouse for a world bibliographic catalog: what was written about e
 
 The project is also how the owner learns Spark and Databricks. When touching Databricks, explain what we're doing and what alternatives exist, comparing to pandas / Airflow / Dagster.
 
-Architecture overview and diagrams: [docs/04-architecture.md](docs/04-architecture.md). Keep its status table and diagrams in sync when components land.
+Architecture overview and diagrams: [docs/04-architecture.md](docs/04-architecture.md).
+
+### Keeping the record (do it in the same change, not later)
+
+| When | Update |
+|---|---|
+| A component lands or changes | `docs/04-architecture.md`: diagrams (dashed = planned), code map, status table |
+| A design decision is made | New ADR in `docs/03-decisions.md` |
+| A new command, flag, job or troubleshooting case | `docs/05-operations.md` |
+| Something surprising (platform quirk, Spark gotcha, source behavior) | Dated entry in `docs/06-lessons-learned.md`, newest first |
+| A source behaves in a new way | Quirks table in that source's doc (`docs/02-...`) |
+| A tool is installed or set up | `docs/01-local-setup.md` |
+
+Commit messages follow Conventional Commits, so the changelog can be generated from git history.
 
 ## Platform
 
