@@ -14,6 +14,7 @@ dependencies = [
 [project.scripts]
 lakehouse-extract = "lakehouse.extract.cli:main"
 lakehouse-bronze = "lakehouse.bronze.job:main"
+lakehouse-silver = "lakehouse.silver.job:main"
 
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]

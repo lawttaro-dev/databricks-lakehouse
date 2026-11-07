@@ -115,17 +115,18 @@ flowchart LR
     C --> B["bronze"] --> BT[("loc_records")]
     B --> CK[("Volume checkpoints<br/>Auto Loader state")]
     C --> S["silver"] --> ST[("loc_records")]
+    S --> SCK[("Volume checkpoints")]
     C --> G["gold"] --> GT[("works_by_year_country_topic")]
 
     classDef planned stroke-dasharray: 5 5
-    class ST,GT planned
+    class GT planned
 ```
 
 | Schema | Holds | Rule |
 |---|---|---|
 | `landing` | Volumes with files exactly as the source returned them | Never transformed, never deleted by pipelines |
 | `bronze` | One Delta row per source record, the full record kept, plus ingestion metadata. Volume `checkpoints` for streaming state | Append/merge only, nothing dropped |
-| `silver` | Canonical flattened records per source, deduplicated on the source record id | Business rules and typing happen here |
+| `silver` | Canonical flattened records per source, deduplicated on the source record id. Volume `checkpoints` | Business rules and typing happen here |
 | `gold` | Aggregates for analysis | Rebuilt from silver |
 
 ## 5. Extraction
@@ -212,14 +213,16 @@ The protocol client is source-agnostic: another library that speaks SRU needs on
 flowchart LR
     V[("landing Volume<br/>page-*.xml")] -->|"Auto Loader, XML source<br/>rowTag=record, explicit schema<br/>(availableNow, checkpointed)"| P["to_bronze<br/>ids from 001/005,<br/>partitions from the path"]
     P --> B[("bronze.loc_records<br/>record_id, record_modified,<br/>leader, controlfield[], datafield[],<br/>batch, country, year,<br/>source_file, ingested_at")]
-    B -->|"foreachBatch MERGE<br/>on record_id,<br/>update if 005 changed"| S[("silver.loc_records<br/>flattened fields,<br/>subjects as array#lt;struct#gt;")]
+    B -->|"Delta stream (new rows only)<br/>latest version per record_id,<br/>foreachBatch MERGE"| S[("silver.loc_records<br/>title, author, years, languages,<br/>3 country notions, LC class,<br/>subjects as array#lt;struct#gt;")]
     S -->|"group by year, country, topic"| G[("gold.works_by_year_country_topic")]
 
     classDef planned stroke-dasharray: 5 5
-    class S,G planned
+    class G planned
 ```
 
-- Bronze code: `src/lakehouse/bronze/` (`marcxml.py` schema and reader, `transform.py` pure transformation, `job.py` Auto Loader entry point), job `resources/loc_bronze_job.yml` (serverless, project wheel). Parsing choice: ADR-011.
+- Bronze code: `src/lakehouse/bronze/` (`marcxml.py` schema and reader, `transform.py` pure transformation, `job.py` Auto Loader entry point), parsing choice ADR-011.
+- Silver code: `src/lakehouse/silver/` (`marc.py` MARC column expressions, `transform.py` dedup and flattening, `merge.py` the MERGE, `job.py` stream entry point). Merge rules: ADR-012.
+- Job `resources/loc_sru_job.yml`: one serverless job per source, tasks `bronze → silver`, both from the project wheel.
 - Written in PySpark as pure `DataFrame -> DataFrame` functions, unit-tested locally. Only the job entry points read and write tables, with the catalog passed as a parameter.
 - Orchestrated as one Lakeflow Job per source (`bronze → silver → gold` tasks), defined in `resources/*.yml`.
 - The same record can match several countries (a work about Argentina and Chile), and the same page can be landed twice. Both are resolved by deduplicating on `record_id` before the MERGE.
@@ -230,11 +233,12 @@ flowchart LR
 |---|---|
 | Local toolchain (uv, Java 17, Databricks CLI, gh) | Done ([01-local-setup.md](01-local-setup.md)) |
 | Repo, uv project, local Spark + Delta tests | Done |
-| Asset Bundle with `dev` / `qa` / `prod` targets | Done (no jobs yet) |
+| Asset Bundle with `dev` / `qa` / `prod` targets | Done, job `loc-sru` |
 | Unity Catalog layout in all three catalogs | Done |
 | SRU extractor (backfill + window, resumable) | Done, first data landed in `dev` |
 | Bronze: Auto Loader + XML source | Done, deployed and run in `dev` (701 rows, 2026 window) |
-| Silver, gold | Planned |
+| Silver: flatten + MERGE | Code and tests done; not deployed yet |
+| Gold | Planned |
 | CI/CD (GitHub Actions, service principal) | Planned |
 | Scheduled extraction in GitHub Actions | Planned |
 | Generated documentation, Obsidian vault | Planned |

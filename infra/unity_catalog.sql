@@ -17,3 +17,5 @@ CREATE VOLUME IF NOT EXISTS {catalog}.landing.loc_sru
   COMMENT 'Library of Congress catalog: raw SRU MARCXML pages';
 CREATE VOLUME IF NOT EXISTS {catalog}.bronze.checkpoints
   COMMENT 'Streaming checkpoints (Auto Loader state) for bronze ingestion jobs';
+CREATE VOLUME IF NOT EXISTS {catalog}.silver.checkpoints
+  COMMENT 'Streaming checkpoints for silver jobs (bronze table as source)';

@@ -1,16 +1,24 @@
-# Bronze ingestion for the Library of Congress source (src/lakehouse/bronze/job.py).
+# Library of Congress source: landing Volume -> bronze -> silver, one task per layer.
 # Serverless: no cluster definition, only a Python environment with our wheel.
 resources:
   jobs:
-    loc_bronze:
-      name: loc-bronze
+    loc_sru:
+      name: loc-sru
       max_concurrent_runs: 1  # one writer per checkpoint
       tasks:
         - task_key: bronze
           environment_key: default
           python_wheel_task:
             package_name: lakehouse
-            entry_point: lakehouse-bronze
+            entry_point: lakehouse-bronze  # src/lakehouse/bronze/job.py
+            parameters: ["--catalog", "${var.catalog}"]
+        - task_key: silver
+          depends_on:
+            - task_key: bronze
+          environment_key: default
+          python_wheel_task:
+            package_name: lakehouse
+            entry_point: lakehouse-silver  # src/lakehouse/silver/job.py
             parameters: ["--catalog", "${var.catalog}"]
       environments:
         - environment_key: default

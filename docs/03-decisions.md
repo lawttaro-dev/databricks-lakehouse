@@ -66,3 +66,16 @@ Short log of decisions taken, newest last. Each entry: context, decision, conseq
 - **Decision:** bronze reads pages with `format("xml")`, `rowTag = "record"` and an explicit schema (`leader`, `controlfield[]`, `datafield[]` with `subfield[]`). Bronze stores these typed arrays, not a JSON string. Auto Loader checkpoints live in the Volume `<catalog>.bronze.checkpoints`.
 - **Alternatives:** `pymarc` in a UDF: familiar Python and full MARC support, but every row crosses the JVM/Python boundary, it adds a dependency to the serverless environment, and silver would have to parse JSON again.
 - **Consequences:** no Python per row and no extra dependency. The schema must be explicit, because inference turns tags into numbers and breaks on blank indicators. Silver works with array functions (`filter`, `transform`, `explode`). `pymarc` stays an option for edge cases (for example MARC-8 encoded records).
+
+## ADR-012 — Silver: latest version per record, MERGE with country union
+
+- **Context:** bronze holds every record as landed: the same `001` appears again after re-harvests, inside overlapping or repeated pages, and once per country query that matched it.
+- **Decision:**
+  - The silver job streams only the rows appended to bronze since its last run (Delta table as a streaming source, `availableNow`) and applies each micro-batch with `foreachBatch` + Delta `MERGE` on `record_id`.
+  - Within a batch, keep the version with the newest `005` and collect every country that matched (`harvest_countries`).
+  - In the MERGE: a newer `005` replaces every column; an older or equal one only adds new countries; anything else is a no-op, so reprocessing is safe.
+  - Three notions of "country" are kept apart: `harvest_countries` (subject query), `pub_country` (`008/15-17`) and `geo_areas` (`043`). Gold decides which to use (doc 02, open decision 1).
+  - Subjects (`650`, `651`) are arrays of structs `{heading, topics, places, periods, forms, vocabulary}`, keeping LCSH apart from other vocabularies such as BISAC.
+- **Alternatives:** rebuilding silver from the whole of bronze on every run: simpler and always consistent, but its cost grows with history (~500k records expected). Can be used as a periodic repair.
+- **Consequences:** silver is updated incrementally and idempotently. A record deleted at the source stays in silver (SRU cannot report deletions).
+
