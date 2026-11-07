@@ -32,3 +32,6 @@ derby.log
 
 # Extractor run logs (docs/05-operations.md)
 *.log
+
+# Jupyter notebooks: notebooks are .py files with # %% cells
+*.ipynb
