@@ -240,6 +240,6 @@ flowchart LR
 | Silver: flatten + MERGE | Code and tests done; not deployed yet |
 | Gold | Planned |
 | CI/CD (GitHub Actions, service principal) | Done: PR checks, qa deploy on merge, prod deploy on tag with approval (ADR-013) |
-| Scheduled extraction in GitHub Actions | Planned |
+| Scheduled extraction in GitHub Actions | Workflow `extract` written (ADR-014); first run pending |
 | Generated documentation, Obsidian vault | Planned |
 | Claude tooling (skills, hooks, PR review) | Planned |

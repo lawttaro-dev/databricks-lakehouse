@@ -22,6 +22,19 @@ tail -f backfill-$(date +%F).log
 - **Exit codes:** `0` done or budget spent; `1` some partitions failed and will be retried on the next run; `2` the run could not continue (endpoint down, unexpected response).
 - **Try without Databricks:** `--local-dir /tmp/landing` instead of `--catalog`.
 
+### Scheduled extraction (qa and prod)
+
+`.github/workflows/extract.yml` runs daily at 06:00 UTC and can be started by hand (**Actions → extract → Run workflow**). ADR-014.
+
+| Environment | Extracts | Then | GitHub environment |
+|---|---|---|---|
+| qa | window 1 year, CL only (smoke) | `bundle run -t qa loc_sru` | `qa` |
+| prod | window (config default) + backfill 1990–2026, budget 1,500/day | `bundle run -t prod loc_sru` | `prod-data` |
+
+- A red run with exit code 1 in an extract step means some partitions failed; the job still ran on what landed, and the next day retries them.
+- Each January, bump `--to-year` of the backfill step (and in the commands above).
+- GitHub disables scheduled workflows after 60 days without repository activity: re-enable under **Actions → extract**.
+
 ## Deploy and run the pipeline
 
 ```bash

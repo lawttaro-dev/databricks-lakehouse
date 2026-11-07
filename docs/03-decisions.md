@@ -91,3 +91,15 @@ Short log of decisions taken, newest last. Each entry: context, decision, conseq
 - **Alternatives:** a private repository (no enforced protection on the free plan); one shared principal (a qa mistake could write prod); a manual "deploy to prod" button instead of tags (no release history).
 - **Consequences:** jobs in qa/prod run as their principal and the principal owns the tables it creates. Releases are git tags, so a changelog can be generated from Conventional Commits between tags. Development moves to branches and pull requests.
 
+## ADR-014 — Scheduled extraction in GitHub Actions, separate environment for data operations
+
+- **Context:** the extractor cannot run inside Databricks (ADR-005). qa and prod need data on a schedule, and prod needs the full history. The GitHub `prod` environment requires approval and accepts only tags, which suits code releases but would block a daily run.
+- **Decision:**
+  - A daily workflow (`.github/workflows/extract.yml`, 06:00 UTC, also manual) extracts and then runs `loc-sru` (bronze → silver) in the same environment.
+  - **qa:** smoke scope (window of 1 year, one country), enough to prove the pipeline runs as `sp-lakehouse-qa`.
+  - **prod:** rolling window (default years from the source config) plus a backfill 1990–2026 with a 1,500-request budget, which resumes every day until complete and then costs no requests.
+  - qa and prod run one after the other (never in parallel against LoC).
+  - Data operations in prod use the GitHub environment **`prod-data`**: same service principal, its own OAuth secret, deployments only from `main`, no approval. Code still reaches prod only through `release` and the approved `prod` environment.
+- **Alternatives:** full scope in qa too (twice the load on LoC); copying dev's landing into prod (mixes environments); a Databricks schedule for the job (could run before the extraction ends).
+- **Consequences:** prod silver is at most one day old. The backfill end year is fixed in the workflow and must be bumped each January. GitHub disables scheduled workflows after 60 days without repository activity.
+
