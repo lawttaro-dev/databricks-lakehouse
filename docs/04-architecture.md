@@ -233,7 +233,7 @@ flowchart LR
 | Asset Bundle with `dev` / `qa` / `prod` targets | Done (no jobs yet) |
 | Unity Catalog layout in all three catalogs | Done |
 | SRU extractor (backfill + window, resumable) | Done, first data landed in `dev` |
-| Bronze: Auto Loader + XML source | In progress: reader, job and tests ready; `to_bronze` pending |
+| Bronze: Auto Loader + XML source | Code and tests done; not deployed yet |
 | Silver, gold | Planned |
 | CI/CD (GitHub Actions, service principal) | Planned |
 | Scheduled extraction in GitHub Actions | Planned |
