@@ -1,0 +1,60 @@
+# Daily extraction from the Library of Congress, then bronze -> silver (job loc-sru).
+# qa: a small smoke run proving the pipeline works as sp-lakehouse-qa.
+# prod: rolling window plus a resumable backfill of the full history (ADR-014).
+# Data operations use the GitHub environment prod-data (main only, no approval);
+# deploying code to prod still goes through the approved `prod` environment.
+name: extract
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC daily; GitHub may start it some minutes late
+  workflow_dispatch:
+
+concurrency:
+  group: extract  # one extraction at a time: never two clients hitting LoC
+
+permissions:
+  contents: read
+
+env:
+  DATABRICKS_AUTH_TYPE: oauth-m2m
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    environment: qa
+    timeout-minutes: 30
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Extract (window, last year, Chile only)
+        run: uv run lakehouse-extract --mode window --window-years 1 --countries CL --catalog qa
+      - name: Run loc-sru (bronze -> silver)
+        if: ${{ !cancelled() }}  # ingest whatever landed, even if a partition failed
+        run: databricks bundle run -t qa loc_sru
+
+  prod:
+    needs: qa
+    if: ${{ !cancelled() }}  # a failed qa smoke run must not stop prod data
+    runs-on: ubuntu-latest
+    environment: prod-data
+    timeout-minutes: 300
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Extract (window, default years from sources/loc_sru.yml)
+        run: uv run lakehouse-extract --mode window --catalog prod --max-requests 600
+      - name: Extract (backfill 1990-2026, resumes daily; no requests once complete)
+        if: ${{ !cancelled() }}
+        run: >-
+          uv run lakehouse-extract --mode backfill --catalog prod
+          --from-year 1990 --to-year 2026 --max-requests 1500
+      - name: Run loc-sru (bronze -> silver)
+        if: ${{ !cancelled() }}
+        run: databricks bundle run -t prod loc_sru
