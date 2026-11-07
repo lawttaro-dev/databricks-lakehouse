@@ -29,3 +29,6 @@ derby.log
 
 # Local notebook state (notebooks/*.py)
 .local/
+
+# Extractor run logs (docs/05-operations.md)
+*.log
