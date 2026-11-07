@@ -4,6 +4,7 @@ What surprised us while building, newest first. Each entry: what happened, why, 
 
 ## 2026-11-07 — CI/CD setup
 
+- **The CLI and the Python SDK find the workspace differently.** `databricks bundle ...` takes the host from `databricks.yml`; `WorkspaceClient()` needs `DATABRICKS_HOST` (or a profile in `~/.databrickscfg`). On a laptop the profile hides the difference; in CI the first extractor run failed with `cannot configure default credentials` until the workflow set `DATABRICKS_HOST`.
 - **Not every action publishes a moving major tag.** `astral-sh/setup-uv@v10` does not exist (only exact tags like `v10.3.3`), so the first CI run failed in 5 s. Check tags with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` before pinning.
 - **Squash merges rewrite history:** a commit that was only local on `main` and also travelled in the PR made local `main` diverge after the merge. Never commit on `main` now that it is protected; if it happens, check the change is in `origin/main` and `git reset --hard origin/main`.
 - **Free GitHub accounts:** branch protection and deployment approvals only for public repositories (ADR-013).
