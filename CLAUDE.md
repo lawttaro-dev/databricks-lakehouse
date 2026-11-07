@@ -16,6 +16,7 @@ Architecture overview and diagrams: [docs/04-architecture.md](docs/04-architectu
 | Something surprising (platform quirk, Spark gotcha, source behavior) | Dated entry in `docs/06-lessons-learned.md`, newest first |
 | A source behaves in a new way | Quirks table in that source's doc (`docs/02-...`) |
 | A tool is installed or set up | `docs/01-local-setup.md` |
+| A table or column is added or changes meaning | Its `TableDoc` (next to the transformation), then regenerate `docs/07-data-dictionary.md` with `uv run python -m lakehouse.catalog > docs/07-data-dictionary.md` (a test fails if it is stale) |
 
 Commit messages follow Conventional Commits, so the changelog can be generated from git history.
 

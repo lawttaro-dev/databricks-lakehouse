@@ -1,7 +1,7 @@
 # Architecture
 
 How the lakehouse is built: components, data flow, environments and identities.
-Decisions behind each piece are in [03-decisions.md](03-decisions.md). Day-to-day commands: [05-operations.md](05-operations.md). Surprises along the way: [06-lessons-learned.md](06-lessons-learned.md). The source is described in [02-data-source-loc-catalog.md](02-data-source-loc-catalog.md).
+Decisions behind each piece are in [03-decisions.md](03-decisions.md). Day-to-day commands: [05-operations.md](05-operations.md). Tables and columns: [07-data-dictionary.md](07-data-dictionary.md). Surprises along the way: [06-lessons-learned.md](06-lessons-learned.md). The source is described in [02-data-source-loc-catalog.md](02-data-source-loc-catalog.md).
 
 Diagrams use [Mermaid](https://mermaid.js.org/), which GitHub and Obsidian render natively. Dashed boxes are **planned**, solid boxes are **implemented**.
 
@@ -222,6 +222,7 @@ flowchart LR
 
 - Bronze code: `src/lakehouse/bronze/` (`marcxml.py` schema and reader, `transform.py` pure transformation, `job.py` Auto Loader entry point), parsing choice ADR-011.
 - Silver code: `src/lakehouse/silver/` (`marc.py` MARC column expressions, `transform.py` dedup and flattening, `merge.py` the MERGE, `job.py` stream entry point). Merge rules: ADR-012.
+- Table and column descriptions live in code (`TableDoc` in each `transform.py`, `src/lakehouse/catalog.py`). Jobs apply them as Unity Catalog comments after writing (only those that changed), and `docs/07-data-dictionary.md` is generated from the same source.
 - Job `resources/loc_sru_job.yml`: one serverless job per source, tasks `bronze → silver`, both from the project wheel.
 - Written in PySpark as pure `DataFrame -> DataFrame` functions, unit-tested locally. Only the job entry points read and write tables, with the catalog passed as a parameter.
 - Orchestrated as one Lakeflow Job per source (`bronze → silver → gold` tasks), defined in `resources/*.yml`.

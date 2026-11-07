@@ -46,6 +46,13 @@ uv run python infra/apply_unity_catalog.py --env dev --dry-run             # pri
 
 Run it after any change to `infra/unity_catalog.sql`.
 
+## Table documentation
+
+Descriptions of every table and column are defined in code (`TableDoc` in `src/lakehouse/*/transform.py`):
+
+- Jobs apply them as Unity Catalog comments after each run (only those that changed), so they show up in Catalog Explorer and the SQL editor.
+- `docs/07-data-dictionary.md` is generated from them: `uv run python -m lakehouse.catalog > docs/07-data-dictionary.md`. A test fails if it is out of date.
+
 ## Inspect the data
 
 | Where | Use it for |

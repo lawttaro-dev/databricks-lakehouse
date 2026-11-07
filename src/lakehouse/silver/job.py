@@ -9,8 +9,10 @@ import argparse
 
 from pyspark.sql import DataFrame, SparkSession
 
+from lakehouse.bronze.transform import BRONZE_DOC
+from lakehouse.catalog import apply_comments
 from lakehouse.silver.merge import merge_into
-from lakehouse.silver.transform import to_silver
+from lakehouse.silver.transform import SILVER_DOC, to_silver
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -21,8 +23,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    source = f"{args.catalog}.bronze.loc_records"
-    table = f"{args.catalog}.silver.loc_records"
+    source = BRONZE_DOC.full_name(args.catalog)
+    table = SILVER_DOC.full_name(args.catalog)
     checkpoint = f"/Volumes/{args.catalog}/silver/checkpoints/loc_records"
 
     def upsert(batch: DataFrame, _batch_id: int) -> None:
@@ -37,6 +39,8 @@ def main(argv: list[str] | None = None) -> None:
         .start()
     )
     query.awaitTermination()
+    if spark.catalog.tableExists(table):
+        apply_comments(spark, table, SILVER_DOC)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,8 @@ import argparse
 from pyspark.sql import SparkSession
 
 from lakehouse.bronze.marcxml import MARC_SCHEMA, READ_OPTIONS
-from lakehouse.bronze.transform import to_bronze
+from lakehouse.bronze.transform import BRONZE_DOC, to_bronze
+from lakehouse.catalog import apply_comments
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -23,7 +24,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     landing = f"/Volumes/{args.catalog}/landing/loc_sru"
     checkpoint = f"/Volumes/{args.catalog}/bronze/checkpoints/loc_records"
-    table = f"{args.catalog}.bronze.loc_records"
+    table = BRONZE_DOC.full_name(args.catalog)
 
     spark = SparkSession.builder.getOrCreate()
     pages = (
@@ -41,6 +42,8 @@ def main(argv: list[str] | None = None) -> None:
         .toTable(table)
     )
     query.awaitTermination()
+    if spark.catalog.tableExists(table):  # absent until the first file lands
+        apply_comments(spark, table, BRONZE_DOC)
 
 
 if __name__ == "__main__":
