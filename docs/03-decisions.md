@@ -79,3 +79,15 @@ Short log of decisions taken, newest last. Each entry: context, decision, conseq
 - **Alternatives:** rebuilding silver from the whole of bronze on every run: simpler and always consistent, but its cost grows with history (~500k records expected). Can be used as a periodic repair.
 - **Consequences:** silver is updated incrementally and idempotently. A record deleted at the source stays in silver (SRU cannot report deletions).
 
+## ADR-013 — CI/CD with GitHub Actions, one service principal per environment
+
+- **Context:** qa and prod must only change through reviewed, tested code, deployed by a non-human identity. Free GitHub accounts offer branch protection and deployment approvals only on public repositories.
+- **Decision:**
+  - The repository is **public**. `main` is protected: changes arrive through pull requests with green checks (`test`, `validate`).
+  - Pull request: `ruff`, `pytest` (local Spark + Delta on the runner) and `bundle validate -t qa`.
+  - Merge to `main`: deploy to **qa** automatically (deploy only; running the job waits for scheduled extraction).
+  - Tag `vX.Y.Z` on a commit of `main`: tests again, manual approval in the GitHub `prod` environment, deploy to **prod**.
+  - **One service principal per environment** (`sp-lakehouse-qa`, `sp-lakehouse-prod`), each with privileges on its own catalog only (`infra/grants.sql`), authenticated with OAuth M2M secrets stored as GitHub environment secrets.
+- **Alternatives:** a private repository (no enforced protection on the free plan); one shared principal (a qa mistake could write prod); a manual "deploy to prod" button instead of tags (no release history).
+- **Consequences:** jobs in qa/prod run as their principal and the principal owns the tables it creates. Releases are git tags, so a changelog can be generated from Conventional Commits between tags. Development moves to branches and pull requests.
+

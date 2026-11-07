@@ -1,5 +1,8 @@
 """Create the Unity Catalog objects (catalogs, schemas, volumes) for each environment.
 
+Also grants each environment's service principal (infra/principals.yml) the privileges in
+infra/grants.sql on its own catalog only, so the qa principal cannot touch prod.
+
 Catalogs, schemas and volumes are long-lived infrastructure, managed here instead of in the
 Asset Bundle, so that removing something from the bundle can never drop a schema with its
 tables (see docs/03-decisions.md, ADR-010).
@@ -14,20 +17,36 @@ import argparse
 import sys
 from pathlib import Path
 
+import yaml
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.sql import StatementState
 
 ENVIRONMENTS = ("dev", "qa", "prod")
 SQL_TEMPLATE = Path(__file__).with_name("unity_catalog.sql")
+GRANTS_TEMPLATE = Path(__file__).with_name("grants.sql")
+PRINCIPALS = Path(__file__).with_name("principals.yml")
+
+
+def split_sql(template: Path, **values: str) -> list[str]:
+    """Fill a SQL template and split it into single statements."""
+    lines = [
+        line for line in template.read_text().splitlines() if not line.lstrip().startswith("--")
+    ]
+    sql = "\n".join(lines)
+    for key, value in values.items():
+        sql = sql.replace(f"{{{key}}}", value)
+    return [stmt.strip() for stmt in sql.split(";") if stmt.strip()]
 
 
 def render_statements(catalog: str) -> list[str]:
-    """Split the SQL template into single statements for one catalog."""
-    lines = [
-        line for line in SQL_TEMPLATE.read_text().splitlines() if not line.lstrip().startswith("--")
-    ]
-    sql = "\n".join(lines).replace("{catalog}", catalog)
-    return [stmt.strip() for stmt in sql.split(";") if stmt.strip()]
+    """Objects for one catalog, plus grants if the environment has a service principal."""
+    statements = split_sql(SQL_TEMPLATE, catalog=catalog)
+    principals = {}
+    if PRINCIPALS.exists():
+        principals = yaml.safe_load(PRINCIPALS.read_text()) or {}
+    if principals.get(catalog):
+        statements += split_sql(GRANTS_TEMPLATE, catalog=catalog, principal=principals[catalog])
+    return statements
 
 
 def pick_warehouse(client: WorkspaceClient, warehouse_id: str | None) -> str:

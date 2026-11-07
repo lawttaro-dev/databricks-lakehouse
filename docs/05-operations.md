@@ -35,6 +35,35 @@ databricks bundle run -t dev loc_sru   # bronze then silver, only new data
 - `qa` and `prod` are deployed by CI (planned, Phase 3).
 - Runs are visible in the workspace under **Jobs & Pipelines**: each task's output, duration and errors.
 
+## Change and release flow
+
+`main` is protected (ADR-013): every change goes through a pull request.
+
+```bash
+git switch -c feat/my-change
+# ... commit ...
+git push -u origin feat/my-change
+gh pr create --fill          # CI runs: test (ruff + pytest) and validate (bundle validate -t qa)
+gh pr merge --squash         # when green; the merge deploys to qa
+```
+
+Release to prod:
+
+```bash
+git switch main && git pull
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+The `release` workflow re-runs the tests, waits for approval in GitHub (**Actions → the run → Review deployments → prod**) and deploys that commit to prod.
+
+| Workflow | Trigger | Deploys | Identity |
+|---|---|---|---|
+| `ci` | pull request | nothing (validate only) | `sp-lakehouse-qa` |
+| `ci` | push to `main` | qa | `sp-lakehouse-qa` |
+| `release` | tag `v*` | prod (after approval) | `sp-lakehouse-prod` |
+
+Secrets: `DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET` in the GitHub environments `qa` and `prod` (Settings → Environments). Rotate by creating a new secret for the principal and updating the environment.
+
 ## Unity Catalog objects
 
 Catalogs, schemas and Volumes are not managed by the bundle (ADR-010):

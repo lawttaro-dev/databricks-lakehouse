@@ -1,0 +1,53 @@
+# Pull requests: lint, tests and bundle validation.
+# Merge to main: the same checks, then deploy the bundle to qa.
+# Databricks auth: OAuth M2M with the environment's service principal (ADR-003, ADR-013).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+
+  validate:
+    runs-on: ubuntu-latest
+    environment: qa
+    env:
+      DATABRICKS_AUTH_TYPE: oauth-m2m
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: databricks bundle validate -t qa
+
+  deploy-qa:
+    if: github.event_name == 'push'
+    needs: [test, validate]
+    runs-on: ubuntu-latest
+    environment: qa
+    concurrency: deploy-qa  # never two deploys to the same target at once
+    env:
+      DATABRICKS_AUTH_TYPE: oauth-m2m
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: databricks bundle deploy -t qa

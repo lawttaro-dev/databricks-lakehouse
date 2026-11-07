@@ -1,0 +1,5 @@
+# Service principal (application id) that deploys and runs jobs in each environment.
+# Not secrets: the OAuth secrets live only in GitHub environment secrets (ADR-013).
+# dev has none: developers deploy dev with their own user.
+qa: ead3f2c9-58a2-483f-afc8-599d48d2a4e8    # sp-lakehouse-qa
+prod: 00e5d85e-a398-4fa3-bce0-b710abf421a6  # sp-lakehouse-prod

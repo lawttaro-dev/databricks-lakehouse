@@ -48,6 +48,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Show progress as it happens when output goes to a file (nohup ... > backfill.log)
+    sys.stdout.reconfigure(line_buffering=True)
     args = parse_args(argv)
     config = SruSourceConfig.load(args.source)
 
