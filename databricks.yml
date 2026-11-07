@@ -28,15 +28,19 @@ targets:
     variables:
       catalog: dev
 
-  # qa/prod keep the default root path (~/.bundle/...) of the deploying identity.
-  # Once CI deploys as the service principal, that is the principal's home folder,
-  # not /Workspace/Shared (which every workspace user can write to).
+  # qa/prod deploy into the home folder of the deploying identity (the environment's service
+  # principal), not /Workspace/Shared, which every workspace user can write to. This is the
+  # default path, set explicitly as production mode recommends.
   qa:
     mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
     variables:
       catalog: qa
 
   prod:
     mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
     variables:
       catalog: prod

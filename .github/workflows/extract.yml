@@ -17,6 +17,8 @@ permissions:
   contents: read
 
 env:
+  # The CLI reads the host from databricks.yml; the extractor (Python SDK) needs it here
+  DATABRICKS_HOST: https://dbc-fc51ba90-7949.cloud.databricks.com
   DATABRICKS_AUTH_TYPE: oauth-m2m
 
 jobs:
