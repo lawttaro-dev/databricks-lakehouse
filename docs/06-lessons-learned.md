@@ -4,6 +4,8 @@ What surprised us while building, newest first. Each entry: what happened, why, 
 
 ## 2026-11-16 — Nine red scheduled runs
 
+- **Owning a catalog does not let you read its tables.** qa/prod tables are owned by the service principal that created them; the catalog owner could manage grants but got `INSUFFICIENT_PERMISSIONS` on `SELECT`. `infra/grants.sql` now gives `account users` read-only access (`USE`, `SELECT`, `READ VOLUME`) on qa and prod.
+- **The block on job runs lifted by itself** on 11-16 (a manual run of the qa job succeeded at 15:29 UTC). No banner or message in the workspace explained it.
 - **Every prod extraction failed from 11-07 to 11-16, and the prod backfill never started.** After ~40 minutes the LoC server dropped the connection (`RemoteDisconnected`) and stayed down for minutes. That error was not handled per partition, so it crashed the run; the backfill, next in line, then failed on its first request. The local dev backfill died the same way, at the same point (right after MX 2023).
 - **Brazil was a suspect, but it is not deterministic:** BR 2023 (2,056 records) and BR 2024 answered fine on 11-16, also from position 1,001.
 - **More intermittent SRU diagnostics:** `Query feature unsupported` and `Permanent system error`, on queries that work on other days.
