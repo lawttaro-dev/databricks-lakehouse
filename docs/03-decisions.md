@@ -88,6 +88,7 @@ Short log of decisions taken, newest last. Each entry: context, decision, conseq
   - Merge to `main`: deploy to **qa** automatically (deploy only; running the job waits for scheduled extraction).
   - Tag `vX.Y.Z` on a commit of `main`: tests again, manual approval in the GitHub `prod` environment, deploy to **prod**.
   - **One service principal per environment** (`sp-lakehouse-qa`, `sp-lakehouse-prod`), each with privileges on its own catalog only (`infra/grants.sql`), authenticated with OAuth M2M secrets stored as GitHub environment secrets.
+  - Workspace users (`account users`) get read-only access to qa and prod (added 2026-11-16): production is inspected, never edited by hand.
 - **Alternatives:** a private repository (no enforced protection on the free plan); one shared principal (a qa mistake could write prod); a manual "deploy to prod" button instead of tags (no release history).
 - **Consequences:** jobs in qa/prod run as their principal and the principal owns the tables it creates. Releases are git tags, so a changelog can be generated from Conventional Commits between tags. Development moves to branches and pull requests.
 
