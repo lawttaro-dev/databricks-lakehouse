@@ -2,6 +2,14 @@
 
 What surprised us while building, newest first. Each entry: what happened, why, and what we changed. Decisions themselves live in [03-decisions.md](03-decisions.md).
 
+## 2026-11-16 — Nine red scheduled runs
+
+- **Every prod extraction failed from 11-07 to 11-16, and the prod backfill never started.** After ~40 minutes the LoC server dropped the connection (`RemoteDisconnected`) and stayed down for minutes. That error was not handled per partition, so it crashed the run; the backfill, next in line, then failed on its first request. The local dev backfill died the same way, at the same point (right after MX 2023).
+- **Brazil was a suspect, but it is not deterministic:** BR 2023 (2,056 records) and BR 2024 answered fine on 11-16, also from position 1,001.
+- **More intermittent SRU diagnostics:** `Query feature unsupported` and `Permanent system error`, on queries that work on other days.
+- **Red should mean "act".** Expected source flakiness turned every run red, which hid the one real signal: Databricks refused job runs from 11-13 (`Triggering new runs ... disabled temporarily`) although usage was ~1 DBU/day.
+- **Changes:** retry the new diagnostics (also on count queries); stop cleanly when the server is down and leave partitions pending; exit 0 for source flakiness and report it in the GitHub step summary; run the backfill before the window in prod.
+
 ## 2026-11-07 — CI/CD setup
 
 - **The CLI and the Python SDK find the workspace differently.** `databricks bundle ...` takes the host from `databricks.yml`; `WorkspaceClient()` needs `DATABRICKS_HOST` (or a profile in `~/.databrickscfg`). On a laptop the profile hides the difference; in CI the first extractor run failed with `cannot configure default credentials` until the workflow set `DATABRICKS_HOST`.

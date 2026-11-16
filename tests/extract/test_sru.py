@@ -114,3 +114,14 @@ def test_fetch_page_gives_up_after_all_attempts():
     with pytest.raises(SruError, match="out of range"):
         make_client(server).fetch_page(QUERY, start=1, size=100)
     assert len(server.calls) == 6
+
+
+def test_count_query_retries_other_intermittent_diagnostics():
+    server = FakeSruServer({QUERY: 250})
+    server.failures += ["Query feature unsupported", "Permanent system error"]
+
+    page = make_client(server).search(QUERY)
+
+    assert page.total_records == 250
+    assert len(server.calls) == 3
+    assert [c["maximumRecords"] for c in server.calls] == ["0", "0", "0"]

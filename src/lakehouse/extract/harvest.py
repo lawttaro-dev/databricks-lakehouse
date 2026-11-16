@@ -8,7 +8,7 @@ Landing layout, read later by Auto Loader:
 A partition is complete only when its _SUCCESS marker exists. Runs skip complete partitions,
 so a long backfill can stop at any point (request budget, CI timeout, Ctrl+C) and resume by
 running again with the same batch. A partition that fails is reported and skipped; the run goes
-on with the others.
+on with the others. If the server stops answering, the run stops and leaves the rest pending.
 """
 
 import json
@@ -16,7 +16,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from lakehouse.extract.sru import BudgetExhaustedError, SruClient, SruError, build_query
+from lakehouse.extract.sru import (
+    BudgetExhaustedError,
+    SruClient,
+    SruError,
+    TransientError,
+    build_query,
+)
 from lakehouse.extract.storage import LandingStorage
 
 
@@ -37,6 +43,7 @@ class HarvestReport:
     pending: list[Partition] = field(default_factory=list)
     failed: list[Partition] = field(default_factory=list)
     records: int = 0
+    stopped: str | None = None  # why the run ended early, if it did
 
 
 def plan_partitions(countries: dict[str, tuple[str, ...]], years: range) -> list[Partition]:
@@ -65,7 +72,15 @@ def harvest(
             records = harvest_partition(client, storage, partition, batch, page_size)
         except BudgetExhaustedError:
             report.pending = partitions[index:]
+            report.stopped = "request budget spent"
             log(f"request budget spent; {len(report.pending)} partitions pending")
+            break
+        except TransientError as e:
+            # Retries exhausted: the server is down, and stays down for minutes. Every further
+            # request would fail too, so stop and let the next run resume.
+            report.pending = partitions[index:]
+            report.stopped = f"source unavailable ({e})"
+            log(f"source unavailable, stopping; {len(report.pending)} partitions pending ({e})")
             break
         except SruError as e:
             # No _SUCCESS is written, so the next run retries this partition
