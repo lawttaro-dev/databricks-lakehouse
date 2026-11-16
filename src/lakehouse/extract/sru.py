@@ -2,8 +2,11 @@
 
 Server quirks handled here (observed on lx2.loc.gov, see docs/02-data-source-loc-catalog.md):
   - errors come as HTTP 200 with an SRU diagnostic in the XML body
-  - intermittent "First record position out of range" on valid pages: retry with a smaller page
-  - intermittent disconnects: retry with exponential backoff
+  - intermittent diagnostics on valid queries ("First record position out of range",
+    "Query feature unsupported", "Permanent system error"): retry with growing waits,
+    and with a smaller page for the first one
+  - intermittent disconnects: retry with exponential backoff; the server can stay down for
+    minutes, so callers stop the run when retries are exhausted (see harvest.py)
   - undocumented rate limit: throttle every request and cap requests per run
 """
 
@@ -21,7 +24,9 @@ NS = {
     "marc": "http://www.loc.gov/MARC21/slim",
 }
 USER_AGENT = "lakehouse-extract/0.1 (bibliographic catalog research)"
-FLAKY_DIAGNOSTIC = "First record position out of range"
+FLAKY_DIAGNOSTIC = "First record position out of range"  # also shrinks the page
+# Seen on queries that work minutes later (2026-11-07 to 11-16), so worth retrying
+FLAKY_DIAGNOSTICS = (FLAKY_DIAGNOSTIC, "Query feature unsupported", "Permanent system error")
 
 
 class SruError(Exception):
@@ -92,8 +97,32 @@ class SruClient:
         self._backoff_seconds = backoff_seconds
         self._last_request_at: float | None = None
 
-    def search(self, query: str, start: int = 1, size: int = 0) -> SruPage:
-        """One searchRetrieve request. size=0 returns only the total count."""
+    def search(self, query: str, start: int = 1, size: int = 0, attempts: int = 6) -> SruPage:
+        """searchRetrieve, retrying the server's intermittent diagnostics.
+
+        size=0 returns only the total count. Each retry waits longer (10 s, 20 s, ...);
+        on "out of range" it also asks for a smaller page. A diagnostic can repeat several
+        times in a row (2026-11-07: four in a row, then fine).
+        """
+        for attempt in range(attempts):
+            try:
+                return self._search_once(query, start, size)
+            except BudgetExhaustedError:
+                raise
+            except SruError as e:
+                flaky = any(message in str(e) for message in FLAKY_DIAGNOSTICS)
+                if not flaky or attempt == attempts - 1:
+                    raise
+                self._sleep(self._backoff_seconds * (attempt + 1))
+                if size and FLAKY_DIAGNOSTIC in str(e):
+                    size = max(size * 2 // 3, 1)
+        raise AssertionError("unreachable")
+
+    def fetch_page(self, query: str, start: int, size: int) -> SruPage:
+        """One page of records (may come back shorter than `size`)."""
+        return self.search(query, start=start, size=size)
+
+    def _search_once(self, query: str, start: int, size: int) -> SruPage:
         url = (
             self.endpoint
             + "?"
@@ -122,24 +151,6 @@ class SruClient:
             total_records=int(total.text) if total is not None else 0,
             records_in_page=len(root.findall(".//marc:record", NS)),
         )
-
-    def fetch_page(self, query: str, start: int, size: int, attempts: int = 6) -> SruPage:
-        """Fetch one page of records, retrying the server's intermittent error.
-
-        Each retry waits longer (10 s, 20 s, ...) and asks for a smaller page. The error can
-        repeat several times in a row (2026-11-07: four in a row, then fine).
-        """
-        for attempt in range(attempts):
-            try:
-                return self.search(query, start=start, size=size)
-            except BudgetExhaustedError:
-                raise
-            except SruError as e:
-                if FLAKY_DIAGNOSTIC not in str(e) or attempt == attempts - 1:
-                    raise
-                self._sleep(self._backoff_seconds * (attempt + 1))
-                size = max(size * 2 // 3, 1)
-        raise AssertionError("unreachable")
 
     def _get_with_retries(self, url: str) -> tuple[str, bytes]:
         for attempt in range(self._retries + 1):

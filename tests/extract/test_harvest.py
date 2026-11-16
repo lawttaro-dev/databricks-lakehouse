@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
 
+from lakehouse.extract.cli import step_summary
 from lakehouse.extract.config import SruSourceConfig
-from lakehouse.extract.harvest import Partition, harvest, plan_partitions
+from lakehouse.extract.harvest import HarvestReport, Partition, harvest, plan_partitions
 from lakehouse.extract.sru import SruClient, build_query
 from lakehouse.extract.storage import LocalStorage
-from tests.extract.fake_sru import FakeSruServer
+from tests.extract.fake_sru import FakeSruServer, transient
 
 AR = ("Argentina", "Argentine")
 CL = ("Chile", "Chilean")
@@ -98,6 +99,34 @@ def test_failed_partition_is_reported_and_the_run_goes_on(tmp_path):
     assert report.failed == [Partition("AR", AR, 1950)]
     assert report.completed == [Partition("CL", CL, 1950)]
     assert not (tmp_path / "batch=b1/country=AR/year=1950/_SUCCESS").exists()
+
+
+def test_server_down_stops_the_run_and_leaves_the_rest_pending(tmp_path):
+    server = FakeSruServer({build_query(AR, 1950): 10, build_query(CL, 1950): 5})
+    server.failures += [transient()] * 4  # AR count: first try + 3 retries
+    partitions = [Partition("AR", AR, 1950), Partition("CL", CL, 1950)]
+
+    report = harvest(make_client(server), LocalStorage(tmp_path), partitions, "b1", page_size=100)
+
+    assert report.pending == partitions
+    assert report.stopped.startswith("source unavailable")
+    assert len(server.calls) == 4  # CL was not attempted
+
+
+def test_step_summary_lists_failed_and_pending():
+    report = HarvestReport(
+        completed=[Partition("CL", CL, 2026)],
+        failed=[Partition("BR", ("Brazil",), 2024)],
+        pending=[Partition("AR", AR, 1990)],
+        records=29,
+        stopped="source unavailable (RemoteDisconnected)",
+    )
+
+    text = step_summary("loc_sru backfill → prod", report)
+
+    assert "| 1 | 0 | 1 | 1 | 29 |" in text
+    assert "Failed (retried next run): BR 2024" in text
+    assert "Stopped early: source unavailable" in text
 
 
 def test_source_config_loads_repo_yaml():

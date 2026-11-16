@@ -19,7 +19,7 @@ tail -f backfill-$(date +%F).log
 
 - **Resume:** run the same command again. Partitions with `_SUCCESS` are skipped. Keep `--from-year` and `--to-year` fixed: they name the batch (`backfill-1990-2026`), and a different name starts over.
 - **Budget:** `--max-requests` caps one run (3 s between requests, so 1,500 requests ≈ 75 min). When it is spent the run exits 0 and lists pending partitions.
-- **Exit codes:** `0` done or budget spent; `1` some partitions failed and will be retried on the next run; `2` the run could not continue (endpoint down, unexpected response).
+- **Exit codes:** `0` whenever the source misbehaved in an expected way (failed partitions, server down, budget spent): the next run resumes, and the output (plus the GitHub step summary) lists what is pending. Non-zero means something to fix: configuration, credentials or a bug.
 - **Try without Databricks:** `--local-dir /tmp/landing` instead of `--catalog`.
 
 ### Scheduled extraction (qa and prod)
@@ -31,7 +31,7 @@ tail -f backfill-$(date +%F).log
 | qa | window 1 year, CL only (smoke) | `bundle run -t qa loc_sru` | `qa` |
 | prod | window (config default) + backfill 1990–2026, budget 1,500/day | `bundle run -t prod loc_sru` | `prod-data` |
 
-- A red run with exit code 1 in an extract step means some partitions failed; the job still ran on what landed, and the next day retries them.
+- **Red means act.** LoC flakiness does not turn a run red: open the run page to see the step summary (completed, pending, failed partitions). A red extract step is a real problem (credentials, configuration, bug); a red `Run loc-sru` step is usually Databricks refusing new runs (see Troubleshooting).
 - Each January, bump `--to-year` of the backfill step (and in the commands above).
 - GitHub disables scheduled workflows after 60 days without repository activity: re-enable under **Actions → extract**.
 
@@ -133,7 +133,9 @@ SELECT count(*) FROM dev.bronze.loc_records VERSION AS OF 1;
 | Symptom | Cause | Action |
 |---|---|---|
 | Extractor: `First record position out of range` | LoC server quirk, intermittent, can repeat several times | Retried automatically with backoff; if a partition still fails, rerun the same command |
-| Extractor: `RemoteDisconnected` | LoC network flakiness | Retried automatically (10 s, 20 s, 40 s) |
+| Extractor: `RemoteDisconnected`, `Connection reset` | LoC server down; it can stay down for minutes | Retried (10 s, 20 s, 40 s); if it persists the run stops cleanly and the next one resumes |
+| Extractor: `Query feature unsupported`, `Permanent system error` | LoC intermittent diagnostics on valid queries | Retried with growing waits; then the partition is retried next run |
+| `cannot start job: Triggering new runs ... disabled temporarily` | Databricks refuses new job runs for the workspace (seen on Free Edition 2026-11-13 to 11-16) | Nothing to fix in the code; check the workspace for a quota or status banner and wait |
 | Extractor: HTML instead of XML | Cloudflare challenge on loc.gov | Do not bypass; wait and retry later |
 | VS Code cannot find `uv` | Editor started before `~/.local/bin` was on the session `PATH` | Log out of Ubuntu and back in |
 | VS Code offers to `pip install` packages into `.venv` | uv venvs have no pip | Decline; add packages with `uv add --dev` |

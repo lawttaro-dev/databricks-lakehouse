@@ -50,13 +50,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: Extract (window, default years from sources/loc_sru.yml)
-        run: uv run lakehouse-extract --mode window --catalog prod --max-requests 600
+      # Backfill first: the LoC server tends to go down after a while, and the backfill also
+      # covers the window's years, so it gets the fresh part of the run until it completes.
       - name: Extract (backfill 1990-2026, resumes daily; no requests once complete)
-        if: ${{ !cancelled() }}
         run: >-
           uv run lakehouse-extract --mode backfill --catalog prod
           --from-year 1990 --to-year 2026 --max-requests 1500
+      - name: Extract (window, default years from sources/loc_sru.yml)
+        if: ${{ !cancelled() }}
+        run: uv run lakehouse-extract --mode window --catalog prod --max-requests 600
       - name: Run loc-sru (bronze -> silver)
         if: ${{ !cancelled() }}
         run: databricks bundle run -t prod loc_sru

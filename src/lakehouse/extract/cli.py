@@ -10,16 +10,21 @@ Examples:
 
     # Full-history backfill, resumable: run again with the same arguments to continue
     uv run lakehouse-extract --mode backfill --catalog dev --max-requests 1500
+
+Exit code 0 also when partitions failed, the server went down or the budget ran out: the next
+run resumes (details in the output and, in GitHub Actions, the step summary). Non-zero means
+something to fix (configuration, credentials, a bug).
 """
 
 import argparse
+import os
 import sys
 from datetime import date
 from pathlib import Path
 
 from lakehouse.extract.config import SruSourceConfig
-from lakehouse.extract.harvest import harvest, plan_partitions
-from lakehouse.extract.sru import SruClient, SruError
+from lakehouse.extract.harvest import HarvestReport, Partition, harvest, plan_partitions
+from lakehouse.extract.sru import SruClient
 from lakehouse.extract.storage import LandingStorage, LocalStorage, VolumeStorage
 
 DEFAULT_SOURCE = Path("sources/loc_sru.yml")
@@ -85,12 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{config.source} {args.mode} {from_year}-{to_year} batch={batch}")
     print(f"{len(partitions)} partitions, budget {args.max_requests} requests")
 
-    try:
-        report = harvest(client, storage, partitions, batch, config.page_size)
-    except SruError as e:  # not partition-specific (e.g. the endpoint is down)
-        print(f"ERROR after {client.requests_made} requests: {e}", file=sys.stderr)
-        return 2
-
+    report = harvest(client, storage, partitions, batch, config.page_size)
     print(
         f"done: {len(report.completed)} completed, {len(report.skipped)} skipped, "
         f"{len(report.pending)} pending, {len(report.failed)} failed, {report.records} records, "
@@ -98,9 +98,38 @@ def main(argv: list[str] | None = None) -> int:
     )
     if report.failed:
         failed = ", ".join(f"{p.country} {p.year}" for p in report.failed)
-        print(f"failed partitions (rerun to retry): {failed}", file=sys.stderr)
-        return 1
+        print(f"failed partitions (next run retries them): {failed}")
+
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a") as out:
+            target = args.catalog or str(args.local_dir)
+            out.write(step_summary(f"{config.source} {args.mode} → {target}", report))
+    # Source flakiness (failed partitions, server down, budget spent) is expected and resumes on
+    # the next run, so it is not a failure. Anything else raises and exits non-zero.
     return 0
+
+
+def step_summary(title: str, report: HarvestReport) -> str:
+    """Markdown for the GitHub Actions run page."""
+
+    def names(partitions: list[Partition]) -> str:
+        return ", ".join(f"{p.country} {p.year}" for p in partitions) or "-"
+
+    lines = [
+        f"### {title}",
+        "",
+        "| Completed | Skipped | Pending | Failed | Records |",
+        "|---|---|---|---|---|",
+        f"| {len(report.completed)} | {len(report.skipped)} | {len(report.pending)} "
+        f"| {len(report.failed)} | {report.records} |",
+        "",
+    ]
+    if report.stopped:
+        lines.append(f"Stopped early: {report.stopped}. The next run resumes.")
+    if report.failed:
+        lines.append(f"Failed (retried next run): {names(report.failed)}")
+    return "\n".join(lines) + "\n\n"
 
 
 if __name__ == "__main__":
